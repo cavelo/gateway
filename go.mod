@@ -1,4 +1,4 @@
-module github.com/jackpal/gateway
+module github.com/cavelo/gateway
 
 go 1.19
 
