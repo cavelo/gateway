@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -183,14 +183,13 @@ func parseToWindowsRouteStruct(output []byte) (windowsRouteStruct, error) {
 		return windowsRouteStruct{}, &ErrNoGateway{}
 	}
 
-	minDefaultRoute := slices.MinFunc(defaultRoutes,
-		func(a, b gatewayEntry) int {
-			return a.metric - b.metric
-		})
+	sort.Slice(defaultRoutes, func(i, j int) bool {
+		return defaultRoutes[i].metric < defaultRoutes[j].metric
+	})
 
 	return windowsRouteStruct{
-		Gateway:   minDefaultRoute.gateway,
-		Interface: minDefaultRoute.iface,
+		Gateway:   defaultRoutes[0].gateway,
+		Interface: defaultRoutes[0].iface,
 	}, nil
 }
 
