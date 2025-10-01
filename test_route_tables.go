@@ -24,6 +24,7 @@ const (
 	windowsNoDefaultRoute   = "windowsNoDefaultRoute"
 	windowsNoRoute          = "windowsNoRoute"
 	windows                 = "windows"
+	windowsIgnoreNonDefault = "windowsIgnoreNonDefault"
 )
 
 var routeTables = map[string][]byte{
@@ -343,4 +344,33 @@ Network Destination        Netmask          Gateway       Interface  Metric
 ===========================================================================
 Persistent Routes:
 `),
+
+	windowsIgnoreNonDefault: []byte(`
+===========================================================================
+Interface List
+ 18...........................SGNAutobahn Tunnel
+ 12...........................SGN Tunnel
+ 14...5c ed 8c 25 41 79 ......Microsoft Network Adapter Multiplexor Driver
+  1...........................Software Loopback Interface 1
+===========================================================================
+
+IPv4 Route Table
+===========================================================================
+Active Routes:
+Network Destination        Netmask          Gateway       Interface  Metric
+          0.0.0.0          0.0.0.0        10.0.99.1        10.0.99.3    276
+          0.0.0.0        192.0.0.0         On-link        100.64.0.2    250
+===========================================================================
+Persistent Routes:
+  Network Address          Netmask  Gateway Address  Metric
+          0.0.0.0          0.0.0.0        10.0.99.1  Default 
+===========================================================================
+
+IPv6 Route Table
+===========================================================================
+Active Routes:
+  None
+Persistent Routes:
+  None
+	`),
 }

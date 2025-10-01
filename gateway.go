@@ -8,10 +8,14 @@ import (
 
 // ErrNoGateway is returned if a valid gateway entry was not
 // found in the route table.
-type ErrNoGateway struct{}
+type ErrNoGateway struct {
+	RouteTable []byte
+}
 
 // ErrCantParse is returned if the route table is garbage.
-type ErrCantParse struct{}
+type ErrCantParse struct {
+	RouteTable []byte
+}
 
 // ErrNotImplemented is returned if your operating system
 // is not supported by this package. Please raise an issue
@@ -25,12 +29,12 @@ type ErrInvalidRouteFileFormat struct {
 	row string
 }
 
-func (*ErrNoGateway) Error() string {
-	return "no gateway found"
+func (e *ErrNoGateway) Error() string {
+	return fmt.Sprintf("no gateway found in route table:\n%s", string(e.RouteTable))
 }
 
-func (*ErrCantParse) Error() string {
-	return "can't parse route table"
+func (e *ErrCantParse) Error() string {
+	return fmt.Sprintf("can't parse route table:\n%s", string(e.RouteTable))
 }
 
 func (*ErrNotImplemented) Error() string {

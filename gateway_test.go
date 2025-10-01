@@ -3,9 +3,9 @@
 package gateway
 
 import (
-	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -51,11 +51,12 @@ func TestParseWindows(t *testing.T) {
 		{windows, true, "10.88.88.2", nil},
 		{windowsLocalized, true, "10.88.88.2", nil},
 		{windowsMultipleGateways, true, "10.21.38.1", nil},
-		{randomData, false, "", &ErrCantParse{}},
-		{windowsNoRoute, false, "", &ErrNoGateway{}},
-		{windowsNoDefaultRoute, false, "", &ErrNoGateway{}},
-		{windowsBadRoute1, false, "", &ErrCantParse{}},
-		{windowsBadRoute2, false, "", &ErrCantParse{}},
+		{randomData, false, "", &ErrCantParse{RouteTable: routeTables[randomData]}},
+		{windowsNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[windowsNoRoute]}},
+		{windowsNoDefaultRoute, false, "", &ErrNoGateway{RouteTable: routeTables[windowsNoDefaultRoute]}},
+		{windowsBadRoute1, false, "", &ErrCantParse{RouteTable: routeTables[windowsBadRoute1]}},
+		{windowsBadRoute2, false, "", &ErrCantParse{RouteTable: routeTables[windowsBadRoute2]}},
+		{windowsIgnoreNonDefault, true, "10.0.99.1", nil},
 	}
 
 	t.Run("parseWindowsGatewayIP", func(t *testing.T) {
@@ -68,11 +69,12 @@ func TestParseWindows(t *testing.T) {
 		{windows, true, "10.88.88.149", nil},
 		{windowsLocalized, true, "10.88.88.149", nil},
 		{windowsMultipleGateways, true, "10.21.38.97", nil},
-		{randomData, false, "", &ErrCantParse{}},
-		{windowsNoRoute, false, "", &ErrNoGateway{}},
-		{windowsNoDefaultRoute, false, "", &ErrNoGateway{}},
-		{windowsBadRoute1, false, "", &ErrCantParse{}},
+		{randomData, false, "", &ErrCantParse{RouteTable: routeTables[randomData]}},
+		{windowsNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[windowsNoRoute]}},
+		{windowsNoDefaultRoute, false, "", &ErrNoGateway{RouteTable: routeTables[windowsNoDefaultRoute]}},
+		{windowsBadRoute1, false, "", &ErrCantParse{RouteTable: routeTables[windowsBadRoute1]}},
 		{windowsBadRoute2, true, "10.88.88.149", nil},
+		{windowsIgnoreNonDefault, true, "10.0.99.3", nil},
 	}
 
 	t.Run("parseWindowsInterfaceIP", func(t *testing.T) {
@@ -85,7 +87,7 @@ func TestParseLinux(t *testing.T) {
 
 	testcases := []ipTestCase{
 		{linux, true, "192.168.8.1", nil},
-		{linuxNoRoute, false, "", &ErrNoGateway{}},
+		{linuxNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[linuxNoRoute]}},
 	}
 
 	t.Run("parseLinuxGatewayIP", func(t *testing.T) {
@@ -94,7 +96,7 @@ func TestParseLinux(t *testing.T) {
 
 	interfaceTestCases := []ifaceTestCase{
 		{linux, "wlp4s0", true, "192.168.2.1", nil},
-		{linuxNoRoute, "wlp4s0", false, "", &ErrNoGateway{}},
+		{linuxNoRoute, "wlp4s0", false, "", &ErrNoGateway{RouteTable: routeTables[linuxNoRoute]}},
 	}
 
 	t.Run("parseLinuxInterfaceIP", func(t *testing.T) {
@@ -121,15 +123,15 @@ func TestParseUnix(t *testing.T) {
 		{freeBSD, true, "10.88.88.2", nil},
 		{netBSD, true, "172.31.16.1", nil},
 		{solaris, true, "172.16.32.1", nil},
-		{randomData, false, "", &ErrCantParse{}},
-		{darwinNoRoute, false, "", &ErrNoGateway{}},
-		{darwinBadRoute, false, "", &ErrCantParse{}},
-		{freeBSDNoRoute, false, "", &ErrNoGateway{}},
-		{freeBSDBadRoute, false, "", &ErrCantParse{}},
-		{netBSDNoRoute, false, "", &ErrNoGateway{}},
-		{netBSDBadRoute, false, "", &ErrCantParse{}},
-		{solarisNoRoute, false, "", &ErrNoGateway{}},
-		{solarisBadRoute, false, "", &ErrCantParse{}},
+		{randomData, false, "", &ErrCantParse{RouteTable: routeTables[randomData]}},
+		{darwinNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[darwinNoRoute]}},
+		{darwinBadRoute, false, "", &ErrCantParse{RouteTable: routeTables[darwinBadRoute]}},
+		{freeBSDNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[freeBSDNoRoute]}},
+		{freeBSDBadRoute, false, "", &ErrCantParse{RouteTable: routeTables[freeBSDBadRoute]}},
+		{netBSDNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[netBSDNoRoute]}},
+		{netBSDBadRoute, false, "", &ErrCantParse{RouteTable: routeTables[netBSDBadRoute]}},
+		{solarisNoRoute, false, "", &ErrNoGateway{RouteTable: routeTables[solarisNoRoute]}},
+		{solarisBadRoute, false, "", &ErrCantParse{RouteTable: routeTables[solarisBadRoute]}},
 	}
 
 	t.Run("parseUnixGatewayIP", func(t *testing.T) {
@@ -143,14 +145,14 @@ func TestParseUnix(t *testing.T) {
 		{freeBSD, "ena0", true, "10.88.88.2", nil},
 		{netBSD, "ena0", true, "172.31.16.1", nil},
 		{solaris, "net0", true, "172.16.32.1", nil},
-		{randomData, "", false, "", &ErrCantParse{}},
-		{darwinNoRoute, "", false, "", &ErrNoGateway{}},
-		{darwinBadRoute, "en0", true, "192.168.1.254", &ErrCantParse{}},
-		{freeBSDNoRoute, "", false, "", &ErrNoGateway{}},
-		{freeBSDBadRoute, "ena0", true, "10.88.88.2", nil},
-		{netBSDNoRoute, "", false, "", &ErrNoGateway{}},
+		{randomData, "", false, "", &ErrCantParse{RouteTable: routeTables[randomData]}},
+		{darwinNoRoute, "", false, "", &ErrNoGateway{RouteTable: routeTables[darwinNoRoute]}},
+		{darwinBadRoute, "en0", true, "192.168.1.254", &ErrCantParse{RouteTable: routeTables[darwinBadRoute]}},
+		{freeBSDNoRoute, "", false, "", &ErrNoGateway{RouteTable: routeTables[freeBSDNoRoute]}},
+		{freeBSDBadRoute, "ena0", true, "10.88.88.2", &ErrCantParse{RouteTable: routeTables[freeBSDBadRoute]}},
+		{netBSDNoRoute, "", false, "", &ErrNoGateway{RouteTable: routeTables[netBSDNoRoute]}},
 		{netBSDBadRoute, "ena0", true, "172.31.16.1", nil},
-		{solarisNoRoute, "", false, "", &ErrNoGateway{}},
+		{solarisNoRoute, "", false, "", &ErrNoGateway{RouteTable: routeTables[solarisNoRoute]}},
 		{solarisBadRoute, "net0", true, "172.16.32.1", nil},
 	}
 
@@ -172,8 +174,8 @@ func testGatewayAddress(t *testing.T, testcases []ipTestCase, fn func([]byte) (n
 				}
 			} else if err == nil {
 				t.Errorf("Unexpected nil error in test #%d", i)
-			} else if errors.Is(err, tc.expectedError) {
-				// Correct error was retured
+			} else if reflect.TypeOf(err) == reflect.TypeOf(tc.expectedError) && err.Error() == tc.expectedError.Error() {
+				// Correct error was returned
 				return
 			} else {
 				t.Errorf("Expected error of type %T, got %T", tc.expectedError, err)
@@ -215,7 +217,7 @@ func testInterfaceAddress(t *testing.T, testcases []ifaceTestCase, fn func([]byt
 				}
 			} else if err == nil {
 				t.Errorf("Unexpected nil error in test #%d", i)
-			} else if errors.Is(err, tc.expectedError) {
+			} else if reflect.TypeOf(err) == reflect.TypeOf(tc.expectedError) && err.Error() == tc.expectedError.Error() {
 				// Correct error was retured
 				return
 			} else {
